@@ -4,14 +4,39 @@ import path from "path";
 import { GoogleGenAI } from "@google/genai";
 import { generateFallbackRoadmap } from "./server/fallbackGenerator";
 
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY || "",
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
-    }
-  }
-});
+const apiKeys = [
+  process.env.GEMINI_API_KEY || "",
+  process.env.GEMINI_API_KEY_2 || "",
+  process.env.GEMINI_API_KEY_3 || ""
+].filter(key => key.trim() !== "");
+
+if (apiKeys.length === 0) {
+  apiKeys.push(""); // Fallback empty key to trigger standard missing key errors
+}
+
+// Global index to cycle keys across requests to balance the load
+let currentGlobalKeyIndex = 0;
+
+function getClient(indexOffset: number = 0) {
+  const targetIndex = (currentGlobalKeyIndex + indexOffset) % apiKeys.length;
+  const key = apiKeys[targetIndex];
+  return {
+    client: new GoogleGenAI({
+      apiKey: key,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        }
+      }
+    }),
+    keyIndex: targetIndex
+  };
+}
+
+function rotateGlobalKey() {
+  currentGlobalKeyIndex = (currentGlobalKeyIndex + 1) % apiKeys.length;
+  console.log(`Rotating active Gemini API key globally to index ${currentGlobalKeyIndex}.`);
+}
 
 // Helper to clean HTML and fetch content from a URL
 async function fetchUrlContent(url: string): Promise<string> {
@@ -271,89 +296,87 @@ app.use(express.json());
     let lastModelError = null;
 
     for (const attempt of attempts) {
-      try {
-        console.log(`Attempting dynamic roadmap generation with model: "${attempt.model}" (useSearch: ${attempt.useSearch})...`);
-        
-        const config: any = {
-          responseMimeType: "application/json",
-        };
-        if (attempt.useSearch) {
-          config.tools = [{ googleSearch: {} }];
+      // Try each available API key before moving to the next model fallback
+      for (let k = 0; k < apiKeys.length; k++) {
+        const { client, keyIndex } = getClient(k);
+        try {
+          console.log(`Attempting dynamic roadmap generation with model "${attempt.model}" (useSearch: ${attempt.useSearch}) using API Key Index ${keyIndex}...`);
+          
+          const config: any = {
+            responseMimeType: "application/json",
+          };
+          if (attempt.useSearch) {
+            config.tools = [{ googleSearch: {} }];
+          }
+
+          const response = await client.models.generateContent({
+            model: attempt.model,
+            contents: `You are an elite cognitive learning architect. Create an interactive, highly comprehensive educational roadmap for the subject: "${prompt}".
+            ${isUrl ? `This roadmap MUST be based on the following fetched webpage content: \n\n${urlContext}\n\n` : ''}
+            
+            Your mission is to generate EXACTLY 9 chapters.
+            Each chapter must teach real, actionable knowledge, explaining what it teaches, and how the user can apply it in the future.
+            Each chapter's content should be EXTREMELY substantial, at least twice as long as normal (6-8 paragraphs of dense, high-quality, practical learning material written in Markdown). Do not shorten it, write a mini-book chapter for each.
+            
+            Use Google Search to find a high-quality, real public cover image URL representing this book, movie, or topic and return it in "coverImage" for the roadmap. 
+            Additionally, for EACH chapter, you must provide a "coverImage" URL (using an Unsplash featured image format, e.g., https://images.unsplash.com/featured/800x400/?keyword,topic).
+            Also, for EACH chapter, provide exactly 4-5 key takeaways as an array of strings in "bulletPoints".
+            
+            You must also generate EXACTLY 9 multiple-choice quiz questions. Each question MUST directly represent and test the core learning material from its corresponding chapter (Question 1 for Chapter 1, Question 2 for Chapter 2, etc.). Each question must have exactly 4 distinct choices and indicate the correct answer index (0-3).
+            
+            Return the result as a strictly valid JSON object with the following structure:
+            {
+              "title": "Roadmap Title",
+              "description": "Engaging description summarizing what the learner will gain",
+              "imageSearchQuery": "Cleaned up name of the main subject (e.g., 'Interstellar', 'Photosynthesis') for image search",
+              "mediaType": "movie", // MUST be one of: "movie", "book", "tv", "general"
+              "coverImage": "Leave empty",
+              "chapters": [
+                {
+                  "title": "Chapter 1: ...",
+                  "content": "Deep, 2x extended educational content in Markdown...",
+                  "coverImage": "https://image.pollinations.ai/prompt/relevant%20keyword",
+                  "bulletPoints": ["Key point 1", "Key point 2", "Key point 3", "Key point 4"]
+                },
+                ... (exactly 9 chapters)
+              ],
+              "quiz": [
+                {
+                  "question": "Clear multiple choice question testing Chapter 1's content...",
+                  "options": ["Option A", "Option B", "Option C", "Option D"],
+                  "correctAnswerIndex": 0
+                },
+                ... (exactly 9 questions, matching chapters 1 to 9 in order)
+              ]
+            }`,
+            config,
+          });
+
+          const text = response.text;
+          if (!text) {
+            throw new Error("Empty response from Gemini API");
+          }
+
+          parsedData = JSON.parse(text);
+          console.log(`Successfully generated roadmap using model "${attempt.model}" with API Key Index ${keyIndex}!`);
+          currentGlobalKeyIndex = keyIndex; // Update active global key
+          break; // Break the key loop on success
+        } catch (error: any) {
+          console.warn(`API Key Index ${keyIndex} failed for model "${attempt.model}":`, error.message || error);
+          lastModelError = error;
+
+          const errMsg = (error.message || "").toLowerCase();
+          const errCode = error.code || (error.error && error.error.code);
+
+          // If rate limited or quota exceeded, rotate the global key for subsequent requests
+          if (errCode === 429 || errMsg.includes("quota") || errMsg.includes("rate limit")) {
+            rotateGlobalKey();
+          }
         }
+      }
 
-        const response = await ai.models.generateContent({
-          model: attempt.model,
-          contents: `You are an elite cognitive learning architect. Create an interactive, highly comprehensive educational roadmap for the subject: "${prompt}".
-          ${isUrl ? `This roadmap MUST be based on the following fetched webpage content: \n\n${urlContext}\n\n` : ''}
-          
-          Your mission is to generate EXACTLY 9 chapters.
-          Each chapter must teach real, actionable knowledge, explaining what it teaches, and how the user can apply it in the future.
-          Each chapter's content should be EXTREMELY substantial, at least twice as long as normal (6-8 paragraphs of dense, high-quality, practical learning material written in Markdown). Do not shorten it, write a mini-book chapter for each.
-          
-          Use Google Search to find a high-quality, real public cover image URL representing this book, movie, or topic and return it in "coverImage" for the roadmap. 
-          Additionally, for EACH chapter, you must provide a "coverImage" URL (using an Unsplash featured image format, e.g., https://images.unsplash.com/featured/800x400/?keyword,topic).
-          Also, for EACH chapter, provide exactly 4-5 key takeaways as an array of strings in "bulletPoints".
-          
-          You must also generate EXACTLY 9 multiple-choice quiz questions. Each question MUST directly represent and test the core learning material from its corresponding chapter (Question 1 for Chapter 1, Question 2 for Chapter 2, etc.). Each question must have exactly 4 distinct choices and indicate the correct answer index (0-3).
-          
-          Return the result as a strictly valid JSON object with the following structure:
-          {
-            "title": "Roadmap Title",
-            "description": "Engaging description summarizing what the learner will gain",
-            "imageSearchQuery": "Cleaned up name of the main subject (e.g., 'Interstellar', 'Photosynthesis') for image search",
-            "mediaType": "movie", // MUST be one of: "movie", "book", "tv", "general"
-            "coverImage": "Leave empty",
-            "chapters": [
-              {
-                "title": "Chapter 1: ...",
-                "content": "Deep, 2x extended educational content in Markdown...",
-                "coverImage": "https://image.pollinations.ai/prompt/relevant%20keyword",
-                "bulletPoints": ["Key point 1", "Key point 2", "Key point 3", "Key point 4"]
-              },
-              ... (exactly 9 chapters)
-            ],
-            "quiz": [
-              {
-                "question": "Clear multiple choice question testing Chapter 1's content...",
-                "options": ["Option A", "Option B", "Option C", "Option D"],
-                "correctAnswerIndex": 0
-              },
-              ... (exactly 9 questions, matching chapters 1 to 9 in order)
-            ]
-          }`,
-          config,
-        });
-
-        const text = response.text;
-        if (!text) {
-          throw new Error("Empty response from Gemini API");
-        }
-
-        parsedData = JSON.parse(text);
-        console.log(`Successfully generated roadmap using model "${attempt.model}"!`);
-        break; // Successfully generated and parsed, break out of loop
-      } catch (error: any) {
-        console.warn(`Model "${attempt.model}" (useSearch: ${attempt.useSearch}) failed or reached quota limit:`, error.message || error);
-        lastModelError = error;
-
-        // Convert status to string safely to avoid TypeError
-        const errMsg = (error.message || "").toLowerCase();
-        const errStatus = String(error.status || "").toLowerCase();
-        const errCode = error.code || (error.error && error.error.code);
-        
-        // Only break early on hard authentication errors (invalid API key).
-        // For quota (429) or rate limits, we DO NOT break, we let the loop try the next model seamlessly!
-        if (
-          errCode === 403 || 
-          errCode === 401 ||
-          errMsg.includes("key_invalid") ||
-          errMsg.includes("unauthorized")
-        ) {
-          console.warn("Fatal API auth error detected (Invalid Key). Advancing immediately to localized smart learning generator.");
-          break;
-        } else {
-          console.warn("Model failed (possibly quota/rate-limit). Switching seamlessly to the next model fallback...");
-        }
+      if (parsedData) {
+        break; // Break attempts loop if we successfully generated the data
       }
     }
 
@@ -396,39 +419,56 @@ app.use(express.json());
     const { message, context, history } = req.body;
     if (!message) return res.status(400).json({ error: "Message is required" });
 
-    try {
-      const chatContext = `You are a helpful AI tutor discussing a specific chapter with a student.
-      Here is the chapter content for context:
-      "${context}"
-      
-      Keep your answers highly relevant, encouraging, and concise.`;
+    let lastError = null;
 
-      const contents = [
-        { role: "user", parts: [{ text: chatContext }] },
-        { role: "model", parts: [{ text: "Understood. I am ready to discuss the chapter." }] }
-      ];
+    for (let k = 0; k < apiKeys.length; k++) {
+      const { client, keyIndex } = getClient(k);
+      try {
+        const chatContext = `You are a helpful AI tutor discussing a specific chapter with a student.
+        Here is the chapter content for context:
+        "${context}"
+        
+        Keep your answers highly relevant, encouraging, and concise.`;
 
-      if (history && Array.isArray(history)) {
-        history.forEach((msg) => {
-          contents.push({
-            role: msg.role === "ai" ? "model" : "user",
-            parts: [{ text: msg.content }]
+        const contents = [
+          { role: "user", parts: [{ text: chatContext }] },
+          { role: "model", parts: [{ text: "Understood. I am ready to discuss the chapter." }] }
+        ];
+
+        if (history && Array.isArray(history)) {
+          history.forEach((msg) => {
+            contents.push({
+              role: msg.role === "ai" ? "model" : "user",
+              parts: [{ text: msg.content }]
+            });
           });
+        }
+
+        contents.push({ role: "user", parts: [{ text: message }] });
+
+        console.log(`Attempting chat response with API Key Index ${keyIndex}...`);
+        const response = await client.models.generateContent({
+          model: "gemini-3.5-flash",
+          contents: contents,
         });
+
+        console.log(`Chat response succeeded with API Key Index ${keyIndex}!`);
+        currentGlobalKeyIndex = keyIndex; // Align global index
+        return res.json({ reply: response.text });
+      } catch (error: any) {
+        console.error(`Chat API failed with API Key Index ${keyIndex}:`, error.message || error);
+        lastError = error;
+
+        const errMsg = (error.message || "").toLowerCase();
+        const errCode = error.code || (error.error && error.error.code);
+
+        if (errCode === 429 || errMsg.includes("quota") || errMsg.includes("rate limit")) {
+          rotateGlobalKey();
+        }
       }
-
-      contents.push({ role: "user", parts: [{ text: message }] });
-
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: contents,
-      });
-
-      res.json({ reply: response.text });
-    } catch (error: any) {
-      console.error("Chat API error:", error);
-      res.status(500).json({ error: "Failed to get AI response" });
     }
+
+    res.status(500).json({ error: "Failed to get AI response", message: lastError?.message });
   });
 
   // Vite middleware / Static serving (only if NOT running on Vercel)
