@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: cognipath
+    runtime: node
+    buildCommand: bun run build
+    startCommand: bun run start
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY_2
+        sync: false
+      - key: GEMINI_API_KEY_3
+        sync: false
