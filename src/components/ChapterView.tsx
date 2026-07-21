@@ -44,10 +44,10 @@ export default function ChapterView({
         <div className="flex items-center gap-4">
           <button
             onClick={onCloseToRoadmap}
-            className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition flex items-center gap-2 font-semibold text-sm shadow-sm"
+            className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition flex items-center gap-2 font-semibold text-sm shadow-sm cursor-pointer"
           >
             <X size={16} />
-            <span>Close Chapter</span>
+            <span>Close <span className="hidden sm:inline">Chapter</span></span>
           </button>
         </div>
         
@@ -62,27 +62,27 @@ export default function ChapterView({
 
         <div>
           <div className="flex items-center gap-2">
-            <div className="hidden sm:flex items-center bg-slate-100 dark:bg-slate-800 rounded-xl p-1 shadow-sm mr-2">
+            <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-xl p-1 shadow-sm mr-2">
               <button 
                 onClick={() => setTextScale(s => Math.max(0, s - 1))}
-                className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300 transition"
+                className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300 transition cursor-pointer"
                 title="Decrease Text Size"
               >
-                <Type size={14} />
+                <Type size={12} />
               </button>
               <span className="text-xs font-bold px-2 text-slate-400">A</span>
               <button 
                 onClick={() => setTextScale(s => Math.min(4, s + 1))}
-                className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300 transition"
+                className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300 transition cursor-pointer"
                 title="Increase Text Size"
               >
-                <Type size={18} />
+                <Type size={16} />
               </button>
             </div>
             
             <button
               onClick={onGoToDashboard}
-              className="p-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 transition flex items-center gap-2 font-semibold text-sm border border-indigo-200 dark:border-indigo-800 shadow-sm"
+              className="p-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 transition flex items-center gap-2 font-semibold text-sm border border-indigo-200 dark:border-indigo-800 shadow-sm cursor-pointer"
             >
               <LayoutDashboard size={16} />
               <span className="hidden sm:inline">Dashboard</span>

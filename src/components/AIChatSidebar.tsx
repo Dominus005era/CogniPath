@@ -164,10 +164,16 @@ export default function AIChatSidebar({ isOpen, onClose, chapterContext, history
   if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed top-0 left-0 h-full w-full sm:w-96 bg-white dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 shadow-2xl z-[100] flex flex-col"
-      style={{ animation: 'slideInLeft 0.25s ease-out' }}
-    >
+    <>
+      {/* Backdrop for mobile clicking outside */}
+      <div 
+        onClick={onClose}
+        className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[90] sm:hidden"
+      />
+      <div
+        className="fixed top-0 left-0 h-full w-[85vw] sm:w-96 bg-white dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 shadow-2xl z-[100] flex flex-col"
+        style={{ animation: 'slideInLeft 0.25s ease-out' }}
+      >
       <style>{`
         @keyframes slideInLeft {
           from { transform: translateX(-100%); opacity: 0; }
@@ -271,5 +277,6 @@ export default function AIChatSidebar({ isOpen, onClose, chapterContext, history
         </p>
       </div>
     </div>
-  );
+  </>
+);
 }
