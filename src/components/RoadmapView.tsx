@@ -190,17 +190,17 @@ export default function RoadmapView({
   return (
     <div id="roadmap_view" className="relative max-w-5xl mx-auto py-8 px-6">
       {/* Header Controls */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10 pb-6 border-b border-slate-200 dark:border-slate-800">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10 pb-6 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex flex-col items-start gap-4">
           <button
             onClick={onBack}
-            className="p-3 bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 transition flex items-center gap-2 cursor-pointer text-sm font-semibold"
+            className="p-3 bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 transition flex items-center gap-2 cursor-pointer text-sm font-semibold self-start"
           >
             <ArrowLeft size={16} />
             <span>Go to Dashboard</span>
           </button>
           <div>
-            <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider font-mono">
+            <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider font-mono block mb-1">
               Iterative Cognitive Path
             </span>
             <h1 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white leading-tight">
@@ -285,8 +285,8 @@ export default function RoadmapView({
         {/* Right Side: Curved / Zigzag Trail */}
         <div className="lg:col-span-8 relative flex flex-col items-center py-10 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 md:p-12 shadow-sm overflow-hidden">
           
-          {/* Curvy Winding Path Connector SVG (Desktop) */}
-          <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-[300px] hidden md:block pointer-events-none select-none z-0">
+          {/* Curvy Winding Path Connector SVG (Desktop & Mobile) */}
+          <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-[300px] block pointer-events-none select-none z-0">
             <svg className="w-full h-full" viewBox="0 0 300 1200" preserveAspectRatio="none">
               <defs>
                 <linearGradient id="curveGrad" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -315,9 +315,6 @@ export default function RoadmapView({
             </svg>
           </div>
 
-          {/* Vertical Winding Path Line (Mobile) */}
-          <div className="absolute top-10 bottom-10 left-8 md:hidden w-1 bg-gradient-to-b from-indigo-600 via-purple-500 to-emerald-500 pointer-events-none z-0"></div>
-
           {/* Chapters Winding Map */}
           <div className="w-full relative z-10 space-y-16 md:space-y-24">
             {chapters.map((chapter, index) => {
@@ -329,19 +326,19 @@ export default function RoadmapView({
               // Alternating layout offsets for zigzag visual motion (Left, Center, Right)
               // index % 3 === 0: Left, index % 3 === 1: Center, index % 3 === 2: Right
               const zigzagClasses = [
-                "md:mr-auto md:ml-12 md:translate-x-0", // Leftish
-                "md:mx-auto md:translate-x-0",          // Centerish
-                "md:ml-auto md:mr-12 md:-translate-x-0"  // Rightish
+                "mr-auto ml-1 sm:ml-12 translate-x-0", // Leftish
+                "mx-auto translate-x-0",              // Centerish
+                "ml-auto mr-1 sm:mr-12 -translate-x-0"  // Rightish
               ];
               const alignmentClass = zigzagClasses[index % 3];
 
               return (
                 <div
                   key={index}
-                  className={`flex items-center gap-6 max-w-sm md:max-w-md ${alignmentClass} relative pl-16 md:pl-0`}
+                  className={`flex items-center gap-3 sm:gap-6 max-w-[280px] sm:max-w-md ${alignmentClass} relative`}
                 >
                   {/* Node Connector Point */}
-                  <div className="absolute left-4 md:left-auto md:relative flex-shrink-0 z-20">
+                  <div className="relative flex-shrink-0 z-20">
                     <button
                       disabled={!isUnlocked}
                       onClick={() => setSelectedChapterIndex(index)}
