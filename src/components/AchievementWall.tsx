@@ -217,7 +217,7 @@ export default function AchievementWall({
                     e.stopPropagation();
                     onRemoveCertificate(cert.id);
                   }}
-                  className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-500 hover:text-red-500 hover:bg-slate-100 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-200 cursor-pointer"
+                  className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-500 hover:text-red-500 hover:bg-slate-100 flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition duration-200 cursor-pointer"
                   title="Remove Certificate"
                 >
                   <Trash2 size={14} />
