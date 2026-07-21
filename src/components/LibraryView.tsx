@@ -70,7 +70,7 @@ export default function LibraryView({
                     e.stopPropagation();
                     onRemoveRoadmap(item.id);
                   }}
-                  className="absolute top-4 right-4 z-20 w-10 h-10 rounded-full bg-slate-950/60 hover:bg-red-600/90 text-white backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer"
+                  className="absolute top-4 right-4 z-20 w-10 h-10 rounded-full bg-slate-950/60 hover:bg-red-600/90 text-white backdrop-blur-md flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-200 cursor-pointer"
                   title="Remove Roadmap"
                 >
                   <Trash2 size={16} />
