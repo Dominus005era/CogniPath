@@ -195,8 +195,11 @@ User types a topic or URL
 
 This project is licensed under the **MIT License** — meaning anyone can freely use, copy, modify, and share this code as long as they give credit to the original author.
 
+## 📌 Disclaimer
+
+Some statistics displayed on this platform (such as member counts, cards generated, and community metrics) are illustrative placeholders and do not reflect real data. CogniPath is built purely for educational and knowledge-exploration purposes.
+
 ---
-📌 Disclaimer: Some statistics displayed on this platform (such as member counts, cards generated, and community metrics) are illustrative placeholders and do not reflect real data. SAGE is built purely for educational and knowledge-exploration purposes. Include this sentence in the README file And then update in the GitHub
 
 <div align="center">
 
